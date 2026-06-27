@@ -19,7 +19,7 @@ else:
     df_log = pd.DataFrame(columns=['Date', 'Hours_Studied', 'Daily_Goal'])
 
 # Create two clean tabs at the top of your webpage
-tab1, tab2 = st.tabs(["📊 Daily Execution Log", "🎯 Rank Velocity Predictor"])
+tab1, tab2 = st.tabs(["📊 Daily Execution Log", "🎯 Advanced Preparation Meter & Rank Engine"])
 
 # ==========================================
 # TAB 1: ADVANCED LOGGING & GRAPH SYSTEM
@@ -87,30 +87,84 @@ with tab1:
         st.info("The Master Log is currently blank. Enter your study hours above to initialize tracking!")
 
 # ==========================================
-# TAB 2: ORIGINAL RANK VELOCITY ENGINE
+# TAB 2: ADVANCED PREPARATION & RANK METER
 # ==========================================
 with tab2:
-    st.subheader("🎯 Instant Rank Estimation Calculator")
-    st.markdown("Slide the bars to evaluate your current routine's competitive projection.")
+    st.subheader("🛡️ Strategic Preparation Profile")
+    st.markdown("Input your exact syllabus parameters to compute your current location on the national competitive vector.")
     
-    # Restoring your original interactive logic sliders
-    daily_study = st.slider("Pure Self-Study Hours (Excluding Classes):", min_value=0.0, max_value=16.0, value=6.0, step=0.5)
-    focus_efficiency = st.slider("Focus & Concentration Level (%):", min_value=10, max_value=100, value=80, step=5)
+    # 3-Column Subject Inputs
+    p_col, c_col, m_col = st.columns(3)
     
-    # Calculate effective execution metrics
-    effective_hours = daily_study * (focus_efficiency / 100.0)
-    
+    with p_col:
+        st.markdown("#### ⚛️ Physics Profile")
+        p_cov = st.slider("Physics Syllabus Covered (%):", 0, 100, 15, key="p_cov")
+        p_lvl = st.radio("Depth Level reached:", ["Mains Only (Formula/Basic PYQs)", "Advanced Level (Deep Theory/Irodov/Tough PYQs)"], key="p_lvl")
+        
+    with c_col:
+        st.markdown("#### 🧪 Chemistry Profile")
+        c_cov = st.slider("Chemistry Syllabus Covered (%):", 0, 100, 15, key="c_cov")
+        c_lvl = st.radio("Depth Level reached:", ["Mains Only (Formula/Basic PYQs)", "Advanced Level (Deep Theory/Irodov/Tough PYQs)"], key="c_lvl")
+        
+    with m_col:
+        st.markdown("#### 📐 Mathematics Profile")
+        m_cov = st.slider("Math Syllabus Covered (%):", 0, 100, 15, key="m_cov")
+        m_lvl = st.radio("Depth Level reached:", ["Mains Only (Formula/Basic PYQs)", "Advanced Level (Deep Theory/Irodov/Tough PYQs)"], key="m_lvl")
+        
+    # Consistency Modifier from historical logging data
     st.markdown("---")
-    st.subheader(f"⚡ Effective Study Velocity: `{effective_hours:.1f} Hours`")
+    st.markdown("#### ⚡ Execution Consistency Modifiers")
+    daily_pace = st.slider("Current Consistent Daily Self-Study Hours:", 1.0, 16.0, 6.0)
+    test_accuracy = st.slider("Average Test/Mock Problem Accuracy Level (%):", 10, 100, 75)
+
+    # ---------------- CALCULATIONS ENGINE ----------------
+    # Weight factors based on choice of depth level
+    p_weight = 1.0 if p_lvl == "Advanced Level (Deep Theory/Irodov/Tough PYQs)" else 0.65
+    c_weight = 1.0 if c_lvl == "Advanced Level (Deep Theory/Irodov/Tough PYQs)" else 0.65
+    m_weight = 1.0 if m_lvl == "Advanced Level (Deep Theory/Irodov/Tough PYQs)" else 0.65
     
-    # Predict rank brackets based on effective hours
-    if effective_hours >= 10.0:
-        st.success("🔥 **Elite AIR Bracket Prediction:** Top 100 / IIT Bombay CSE Pace. Absolute dominant velocity.")
-    elif effective_hours >= 8.0:
-        st.success("🚀 **Top Tier IIT Bracket Prediction:** AIR Under 1,000. Exceptional consistency.")
-    elif effective_hours >= 6.0:
-        st.info("⚡ **Solid NIT / Core IIT Selection Pace:** AIR 1,000 - 10,000. You are securely in the game.")
-    elif effective_hours >= 4.0:
-        st.warning("⚠️ **Borderline Competitive Bracket:** Safe Qualifier. Increase daily duration to break into the elite ranks.")
+    # Compute base score out of 300 maximum normalized units
+    net_p_score = p_cov * p_weight
+    net_c_score = c_cov * c_weight
+    net_m_score = m_cov * m_weight
+    
+    raw_preparation_score = (net_p_score + net_c_score + net_m_score) / 3.0
+    
+    # Apply operational multipliers based on study hours and problem accuracy
+    hours_multiplier = min(1.2, daily_pace / 7.0)
+    accuracy_multiplier = test_accuracy / 100.0
+    
+    final_readiness_index = raw_preparation_score * hours_multiplier * accuracy_multiplier
+    
+    # Prevent edge boundary math errors
+    final_readiness_index = max(1.0, min(100.0, final_readiness_index))
+
+    st.markdown("---")
+    st.subheader("📊 Live Strategic Positioning Metrics")
+    
+    # Progress Trackers for Mains vs Advanced
+    mains_readiness = min(100.0, (p_cov + c_cov + m_cov) / 3.0 * (test_accuracy / 100.0) * (daily_pace / 5.0 if daily_pace < 5 else 1.1))
+    adv_readiness = final_readiness_index
+
+    prog_col1, prog_col2 = st.columns(2)
+    with prog_col1:
+        st.markdown(f"**JEE Mains Preparation Meter:** `{mains_readiness:.1f}%` Complete")
+        st.progress(mains_readiness / 100.0)
+    with prog_col2:
+        st.markdown(f"**JEE Advanced Preparation Meter:** `{adv_readiness:.1f}%` Complete")
+        st.progress(adv_readiness / 100.0)
+
+    # Dynamic Rank Projection Brackets based on math vector mapping
+    st.markdown("### 🎯 National Rank Coordinate Prediction")
+    
+    if adv_readiness >= 75.0:
+        st.success("🔥 **CRITICAL VELOCITY reached: AIR < 500 Predicted (JEE Advanced Tier)**\nYou are exhibiting conceptual mastery coupled with exceptional execution metrics. Eligible for IIT Bombay / IIT Delhi core branches.")
+    elif adv_readiness >= 55.0:
+        st.success("🚀 **HIGH VELOCITY reached: AIR 500 - 2,500 Predicted**\nStrong core structure. If you push your lowest subject profile further into the Advanced zone, you can breach the triple-digit absolute national rank barrier.")
+    elif mains_readiness >= 60.0 and adv_readiness >= 35.0:
+        st.info("⚡ **COMPETITIVE STABILITY: AIR 2,500 - 12,000 (Top NIT / Core IIT Zone)**\nYou have built a reliable framework for JEE Mains and clear the basic Advanced thresholds. Transitioning remaining chapters to advanced question banks will scale your rank.")
+    elif mains_readiness >= 40.0:
+        st.warning("⚠️ **QUALIFIER SPACE: AIR 12,000 - 35,000 (NIT / State Elite)**\nYour tracking reveals structural holes or depth limitations. Your formula base is forming, but daily execution pace must scale up immediately to build conceptual stamina.")
     else:
-        st.error("🚨 **Danger Zone Velocity:** High risk of missing cutoff thresholds. Immediate acceleration required.")
+        st.error("🚨 **FOUNDATIONAL RECONSTRUCTION ZONE**\nCurrent readiness indices are sub-optimal for high competitive tiers. Focus strictly on maximizing problem-solving consistency and mastering your fundamental theory modules.")
+        
