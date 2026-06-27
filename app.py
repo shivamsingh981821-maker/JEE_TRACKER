@@ -83,7 +83,7 @@ with tab1:
         
         with st.expander("📂 View Raw History Sheet"):
             st.dataframe(df_log, use_container_width=True)
-else:
+            
     st.info("The Master Log is currently blank. Enter your study hours above to initialize tracking!")
 
 # ===================================================
@@ -109,19 +109,25 @@ with tab2:
                 ch_name = row["Chapter"]
                 
                 default_checked = bool(row["Completed"])
-                default_status_idx = ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"].index(row["Status"])
+                
+                # Dynamic index handling to catch missing keys safely
+                current_status_str = str(row["Status"])
+                status_options = ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"]
+                default_status_idx = status_options.index(current_status_str) if current_status_str in status_options else 2
                 
                 new_check = st.checkbox(ch_name, value=default_checked, key=f"ch_{sub}_{ch_name}")
-                new_status = st.selectbox("Status:", ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"], index=default_status_idx, key=f"st_{sub}_{ch_name}")
+                new_status = st.selectbox("Status:", status_options, index=default_status_idx, key=f"st_{sub}_{ch_name}")
                 
                 if new_status == "🔴 Backlog":
                     total_backlogs += 1
                 
                 updated_rows.append({"Subject": sub, "Chapter": ch_name, "Completed": new_check, "Status": new_status})
 
-    # Save changes instantly to file storage
+    # Save changes instantly to file storage if updated
     df_new_syll = pd.DataFrame(updated_rows)
-    if not df_new_syll.equals(df_syll):
+    
+    # Fast string matching comparison check to fix line 86 execution freeze
+    if df_new_syll.to_string() != df_syll.to_string():
         df_new_syll.to_csv(SYLLABUS_FILE, index=False)
         st.rerun()
 
@@ -135,7 +141,7 @@ with tab2:
         for _, r in df.iterrows():
             if r["Completed"]:
                 pts += 1.0 if r["Status"] == "🟢 Completed (PYQs Done)" else 0.6
-        return (pts / len(df)) * 100
+        return (pts / len(df)) * 100 if len(df) > 0 else 0.0
 
     p_cov_pct = calc_pts(p_sub)
     c_cov_pct = calc_pts(c_sub)
