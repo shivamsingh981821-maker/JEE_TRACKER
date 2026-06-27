@@ -83,7 +83,7 @@ with tab1:
         
         with st.expander("📂 View Raw History Sheet"):
             st.dataframe(df_log, use_container_width=True)
-else:
+
     st.info("The Master Log is currently blank. Enter your study hours above to initialize tracking!")
 
 # ===================================================
