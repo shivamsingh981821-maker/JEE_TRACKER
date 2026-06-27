@@ -9,65 +9,70 @@ st.set_page_config(page_title="AIR 1 Velocity Tracker", page_icon="🚀", layout
 st.title("🚀 AIR 1 Velocity Engine: Ultimate Command Station")
 st.markdown("---")
 
-# ----------------- DATA ARCHITECTURE SCRIPT -----------------
-DATA_FILE = "study_log.csv"
-if os.path.exists(DATA_FILE):
-    df_log = pd.read_csv(DATA_FILE)
+# ----------------- STORAGE ARCHITECTURE -----------------
+LOG_FILE = "study_log.csv"
+SYLLABUS_FILE = "syllabus_state.csv"
+
+# Load Daily Study Log
+if os.path.exists(LOG_FILE):
+    df_log = pd.read_csv(LOG_FILE)
     df_log['Date'] = pd.to_datetime(df_log['Date']).dt.date
 else:
     df_log = pd.DataFrame(columns=['Date', 'Hours_Studied', 'Daily_Goal'])
 
-# MASTER SYLLABUS DATA STRUCT
+# MASTER SYLLABUS STRUCTURE
 JEE_SYLLABUS = {
     "Physics": ["Units & Dimensions", "Vectors & Kinematics", "Laws of Motion", "Work, Energy & Power", "Rotational Motion", "Gravitation", "Properties of Matter", "Thermodynamics", "SHM & Waves"],
     "Chemistry": ["Mole Concept", "Atomic Structure", "Periodic Table", "Chemical Bonding", "States of Matter", "Thermodynamics", "Chemical Equilibrium", "Ionic Equilibrium", "Redox Reactions"],
     "Math": ["Sets", "Relations & Functions", "Trigonometry", "Quadratic Equations", "Complex Numbers", "Sequences & Series", "Straight Lines", "Circles", "Permutations & Combinations"]
 }
 
-# Create Tabs
+# Load or Initialize Permanent Syllabus State
+if os.path.exists(SYLLABUS_FILE):
+    df_syll = pd.read_csv(SYLLABUS_FILE)
+else:
+    # Build default structure
+    rows = []
+    for sub, chapters in JEE_SYLLABUS.items():
+        for ch in chapters:
+            rows.append({"Subject": sub, "Chapter": ch, "Completed": False, "Status": "🔴 Backlog"})
+    df_syll = pd.DataFrame(rows)
+
+# Create Master Navigation Tabs
 tab1, tab2 = st.tabs(["📊 Daily Desk Station & Logs", "🎯 Smart Syllabus Matrix & Rank Engine"])
 
-# ==========================================
-# TAB 1: LOGS & LIVE STOPWATCH SYSTEM
-# ==========================================
+# ===================================================
+# TAB 1: TIMESTAMP ENGINE LOGS SYSTEM
+# ===================================================
 with tab1:
-    st.subheader("⏱️ Live Desk Session Stopwatch")
+    st.subheader("⏱️ Professional Desk Session Clock")
     
-    # Initialize session state variables for stopwatch
-    if "running" not in st.session_state:
-        st.session_state.running = False
-    if "start_time" not in st.session_state:
-        st.session_state.start_time = 0.0
-    if "elapsed_time" not in st.session_state:
-        st.session_state.elapsed_time = 0.0
+    if "session_start" not in st.session_state:
+        st.session_state.session_start = None
+    if "manual_hours" not in st.session_state:
+        st.session_state.manual_hours = 0.0
 
-    c1, c2, c3 = st.columns([1, 1, 2])
-    with c1:
-        if st.button("🏁 Start Session", use_container_width=True):
-            if not st.session_state.running:
-                st.session_state.start_time = time.time() - st.session_state.elapsed_time
-                st.session_state.running = True
-    with c2:
-        if st.button("🛑 Pause/Stop Session", use_container_width=True):
-            if st.session_state.running:
-                st.session_state.elapsed_time = time.time() - st.session_state.start_time
-                st.session_state.running = False
-    with c3:
-        if st.button("♻️ Reset Timer", use_container_width=True):
-            st.session_state.running = False
-            st.session_state.start_time = 0.0
-            st.session_state.elapsed_time = 0.0
-
-    # Live time computation display
-    if st.session_state.running:
-        current_elapsed = time.time() - st.session_state.start_time
-    else:
-        current_elapsed = st.session_state.elapsed_time
-        
-    hours_calculated = current_elapsed / 3600.0
+    col_btn1, col_btn2, _ = st.columns([1, 1, 2])
     
-    st.info(f"### Current Desk Time Tracked: `{hours_calculated:.2f} Hours` ({int(current_elapsed//60)} minutes)")
+    with col_btn1:
+        if st.button("🏁 Start Session Clock", use_container_width=True):
+            st.session_state.session_start = time.time()
+            st.success("Session timestamp initiated! You can close this app or lock your screen now.")
 
+    with col_btn2:
+        if st.button("🛑 Stop & Calculate Time", use_container_width=True):
+            if st.session_state.session_start is not None:
+                duration_seconds = time.time() - st.session_state.session_start
+                st.session_state.manual_hours = round(duration_seconds / 3600.0, 2)
+                st.session_state.session_start = None
+                st.success("Time computed from background timestamps successfully!")
+            else:
+                st.warning("No active session running. Click Start first.")
+
+    # Status indicator line
+    if st.session_state.session_start is not None:
+        st.info("⚡ **Running in background:** The server is tracking your delta window context. Go study!")
+    
     st.markdown("---")
     st.subheader("📝 Save Session to Master Database")
     
@@ -75,8 +80,7 @@ with tab1:
     with col_d:
         log_date = st.date_input("Select Date", datetime.date.today())
     with col_h:
-        # Defaults automatically to whatever your stopwatch timed!
-        study_hours = st.number_input("Study Hours:", min_value=0.0, max_value=24.0, value=round(hours_calculated, 2), step=0.1)
+        study_hours = st.number_input("Study Hours Logged:", min_value=0.0, max_value=24.0, value=float(st.session_state.manual_hours), step=0.1)
     with col_g:
         custom_daily_goal = st.slider("Set Target Goal for this Date (Hrs):", min_value=1.0, max_value=14.0, value=6.0, step=0.5)
 
@@ -86,14 +90,13 @@ with tab1:
         
         new_row = pd.DataFrame({'Date': [log_date], 'Hours_Studied': [study_hours], 'Daily_Goal': [custom_daily_goal]})
         df_log = pd.concat([df_log, new_row], ignore_index=True).sort_values(by='Date')
-        df_log.to_csv(DATA_FILE, index=False)
-        st.success(f"Log Updated: Saved {study_hours} hrs against a {custom_daily_goal} hr goal!")
+        df_log.to_csv(LOG_FILE, index=False)
+        st.session_state.manual_hours = 0.0  # Clear buffer
+        st.success("Log Saved!")
         st.rerun()
 
     st.markdown("---")
-    
     if not df_log.empty:
-        st.subheader("📊 Analytics Trend")
         total_hours = df_log['Hours_Studied'].sum()
         avg_hours = df_log['Hours_Studied'].mean()
         net_deficit = total_hours - df_log['Daily_Goal'].sum()
@@ -106,66 +109,72 @@ with tab1:
         chart_data = df_log.copy().set_index('Date')
         st.line_chart(chart_data[['Hours_Studied', 'Daily_Goal']])
 
-# ==========================================
-# TAB 2: SMART MATRIX & adaptive RANK ENGINE
-# ==========================================
+# ===================================================
+# TAB 2: PERSISTENT SMART MATRIX & RANK ENGINE
+# ===================================================
 with tab2:
-    st.subheader("🛡️ Dynamic Chapter Checklist & Trackers")
-    st.markdown("Check off your chapters and select their health status. The system calculates completion percentages automatically.")
-    
-    p_percentages = []
-    c_percentages = []
-    m_percentages = []
-    
-    sub_col1, sub_col2, sub_col3 = st.columns(3)
-    
-    # Trackers counters for Backlogs
-    total_backlogs = 0
-    
-    with sub_col1:
-        st.markdown("### ⚛️ Physics Core Matrix")
-        for ch in JEE_SYLLABUS["Physics"]:
-            cb = st.checkbox(ch, key=f"check_p_{ch}")
-            status = st.selectbox("Status", ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"], key=f"status_p_{ch}")
-            if cb:
-                p_percentages.append(1.0 if status == "🟢 Completed (PYQs Done)" else 0.6)
-            if status == "🔴 Backlog":
-                total_backlogs += 1
-                
-    with sub_col2:
-        st.markdown("### 🧪 Chemistry Core Matrix")
-        for ch in JEE_SYLLABUS["Chemistry"]:
-            cb = st.checkbox(ch, key=f"check_c_{ch}")
-            status = st.selectbox("Status", ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"], key=f"status_c_{ch}")
-            if cb:
-                c_percentages.append(1.0 if status == "🟢 Completed (PYQs Done)" else 0.6)
-            if status == "🔴 Backlog":
-                total_backlogs += 1
-                
-    with sub_col3:
-        st.markdown("### 📐 Math Core Matrix")
-        for ch in JEE_SYLLABUS["Math"]:
-            cb = st.checkbox(ch, key=f"check_m_{ch}")
-            status = st.selectbox("Status", ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"], key=f"status_m_{ch}")
-            if cb:
-                m_percentages.append(1.0 if status == "🟢 Completed (PYQs Done)" else 0.6)
-            if status == "🔴 Backlog":
-                total_backlogs += 1
+    st.subheader("🛡️ Permanent Chapter Checklist Matrix")
+    st.markdown("Changes made here are permanently recorded into the server storage system.")
 
-    # Automating calculations instead of manuals sliders
-    p_cov_pct = (sum(p_percentages) / len(JEE_SYLLABUS["Physics"])) * 100
-    c_cov_pct = (sum(c_percentages) / len(JEE_SYLLABUS["Chemistry"])) * 100
-    m_cov_pct = (sum(m_percentages) / len(JEE_SYLLABUS["Math"])) * 100
+    # Render checklist columns dynamically mapped to the dataframe storage
+    sub_col1, sub_col2, sub_col3 = st.columns(3)
+    subjects = ["Physics", "Chemistry", "Math"]
+    cols_mapped = [sub_col1, sub_col2, sub_col3]
+    
+    updated_rows = []
+    total_backlogs = 0
+
+    for i, sub in enumerate(subjects):
+        with cols_mapped[i]:
+            st.markdown(f"### {sub} Core Matrix")
+            sub_df = df_syll[df_syll["Subject"] == sub]
+            
+            for idx, row in sub_df.iterrows():
+                ch_name = row["Chapter"]
+                
+                # Load values out of memory rows
+                default_checked = bool(row["Completed"])
+                default_status_idx = ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"].index(row["Status"])
+                
+                # Display interactive options
+                new_check = st.checkbox(ch_name, value=default_checked, key=f"ch_{sub}_{ch_name}")
+                new_status = st.selectbox("Status:", ["🟢 Completed (PYQs Done)", "🟡 Only Theory", "🔴 Backlog"], index=default_status_idx, key=f"st_{sub}_{ch_name}")
+                
+                if new_status == "🔴 Backlog":
+                    total_backlogs += 1
+                
+                updated_rows.append({"Subject": sub, "Chapter": ch_name, "Completed": new_check, "Status": new_status})
+
+    # Save changes instantly to file storage if any states differ
+    df_new_syll = pd.DataFrame(updated_rows)
+    if not df_new_syll.equals(df_syll):
+        df_new_syll.to_csv(SYLLABUS_FILE, index=False)
+        st.rerun()
+
+    # Automating calculations using saved data
+    p_sub = df_new_syll[df_new_syll["Subject"] == "Physics"]
+    c_sub = df_new_syll[df_new_syll["Subject"] == "Chemistry"]
+    m_sub = df_new_syll[df_new_syll["Subject"] == "Math"]
+
+    def calc_pts(df):
+        pts = 0
+        for _, r in df.iterrows():
+            if r["Completed"]:
+                pts += 1.0 if r["Status"] == "🟢 Completed (PYQs Done)" else 0.6
+        return (pts / len(df)) * 100
+
+    p_cov_pct = calc_pts(p_sub)
+    c_cov_pct = calc_pts(c_sub)
+    m_cov_pct = calc_pts(m_sub)
 
     st.markdown("---")
     st.subheader("🚨 Real-Time Command Metrics")
     
     if total_backlogs > 0:
-        st.error(f"⚠️ **Backlog Threat Multiplier Alert:** You have `{total_backlogs}` active backlogs marked. Clear these dependencies before jumping to massive next modules!")
+        st.error(f"⚠️ **Backlog Threat Multiplier:** You have `{total_backlogs}` active backlogs marked.")
     else:
-        st.success("✅ **Clear Horizon:** Zero active backlogs flagged. Velocity stability nominal.")
+        st.success("✅ **Clear Horizon:** Zero active backlogs flagged.")
 
-    # Calculations Engine Integration for Rank Projection
     mains_readiness = (p_cov_pct + c_cov_pct + m_cov_pct) / 3.0
     adv_readiness = mains_readiness * (1.1 if total_backlogs == 0 else 0.85)
     adv_readiness = max(1.0, min(100.0, adv_readiness))
@@ -180,10 +189,10 @@ with tab2:
 
     st.markdown("### 🎯 Algorithmic National Rank Prediction Coordinates")
     if adv_readiness >= 40.0:
-        st.success("🔥 **Elite Velocity Pace:** AIR < 2,500. Consistent chapter clearing and depth levels verified.")
+        st.success("🔥 **Elite Velocity Pace:** AIR < 2,500.")
     elif mains_readiness >= 15.0:
-        st.info("⚡ **NIT Selection Stability Zone:** AIR 5,000 - 15,000. Foundations are scaling up beautifully. Keep moving chapters to 'Completed'.")
+        st.info("⚡ **NIT Selection Stability Zone:** AIR 5,000 - 15,000.")
     elif mains_readiness > 0:
-        st.warning("⚠️ **Starting Acceleration Phase:** Initial modules locked down. Keep accumulating completed targets to move up ranks.")
+        st.warning("⚠️ **Starting Acceleration Phase:** Initial modules locked down.")
     else:
-        st.info("The Syllabus Matrix is clean. Check your current running batch chapters above to deploy your baseline positioning index!")
+        st.info("The Syllabus Matrix is clean. Check your current running batch chapters above to deploy your index!")
