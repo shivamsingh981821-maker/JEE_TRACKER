@@ -173,7 +173,7 @@ with tab3:
         else:
             try:
                 with st.spinner("AI Professor compiling custom exam workspace sheets..."):
-                    genai.configure(api_key=user_api_key)
+                    genai.configure(api_key=user_api_key) 
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     prompt = f"""
