@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 import datetime
 import os
+import time
+import google.generativeai as genai
 
-st.set_page_config(page_title="AIR 1 Velocity Tracker", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="AIR Infinite Velocity Engine", page_icon="🎯", layout="wide")
 
-st.title("🚀 AIR 1 Velocity Engine: Ultimate Command Station")
+st.title("🦅 AIR Infinite Velocity Engine: Master Command Station")
 st.markdown("---")
 
-# ----------------- STORAGE ARCHITECTURE -----------------
 LOG_FILE = "study_log.csv"
 SYLLABUS_FILE = "syllabus_state.csv"
 
@@ -19,9 +20,32 @@ else:
     df_log = pd.DataFrame(columns=['Date', 'Hours_Studied', 'Daily_Goal'])
 
 JEE_SYLLABUS = {
-    "Physics": ["Units & Dimensions", "Vectors & Kinematics", "Laws of Motion", "Work, Energy & Power", "Rotational Motion", "Gravitation", "Properties of Matter", "Thermodynamics", "SHM & Waves"],
-    "Chemistry": ["Mole Concept", "Atomic Structure", "Periodic Table", "Chemical Bonding", "States of Matter", "Thermodynamics", "Chemical Equilibrium", "Ionic Equilibrium", "Redox Reactions"],
-    "Math": ["Sets", "Relations & Functions", "Trigonometry", "Quadratic Equations", "Complex Numbers", "Sequences & Series", "Straight Lines", "Circles", "Permutations & Combinations"]
+    "Physics": [
+        "Units & Dimensions", "Vectors & Kinematics", "Laws of Motion", "Work, Energy & Power", 
+        "Rotational Motion", "Gravitation", "Mechanical Properties of Solids", "Mechanical Properties of Fluids", 
+        "Thermal Properties of Matter", "Thermodynamics", "Kinetic Theory of Gases", "SHM & Waves",
+        "Electrostatics & Gauss Law", "Capacitance", "Current Electricity", "Moving Charges & Magnetism", 
+        "Magnetism & Matter", "Electromagnetic Induction (EMI)", "Alternating Current (AC)", "Electromagnetic Waves",
+        "Ray Optics & Optical Instruments", "Wave Optics", "Dual Nature of Radiation & Matter", "Atoms", "Nuclei", 
+        "Electronic Devices (Semiconductors)"
+    ],
+    "Chemistry": [
+        "Some Basic Concepts of Chemistry (Mole Concept)", "Structure of Atom", "Classification of Elements & Periodicity", 
+        "Chemical Bonding & Molecular Structure", "Chemical Thermodynamics", "Chemical Equilibrium", "Ionic Equilibrium", 
+        "Redox Reactions", "Organic Chemistry: Basic Principles & Techniques (GOC)", "Hydrocarbons",
+        "Solutions", "Electrochemistry", "Chemical Kinetics", "The d & f-Block Elements", "Coordination Compounds", 
+        "Haloalkanes & Haloarenes", "Alcohols, Phenols & Ethers", "Aldehydes, Ketones & Carboxylic Acids", 
+        "Amines", "Biomolecules"
+    ],
+    "Math": [
+        "Sets", "Relations & Functions", "Trigonometric Functions", "Principle of Mathematical Induction", 
+        "Complex Numbers & Quadratic Equations", "Linear Inequalities", "Permutations & Combinations", 
+        "Binomial Theorem", "Sequences & Series", "Straight Lines", "Conic Sections (Circles, Parabola, Ellipse, Hyperbola)", 
+        "Introduction to 3D Geometry", "Limits & Derivatives", "Statistics", "Probability",
+        "Matrices", "Determinants", "Continuity & Differentiability", "Applications of Derivatives", 
+        "Integrals (Calculus)", "Applications of Integrals", "Differential Equations", "Vector Algebra", 
+        "Three Dimensional Geometry"
+    ]
 }
 
 if os.path.exists(SYLLABUS_FILE):
@@ -33,12 +57,8 @@ else:
             rows.append({"Subject": sub, "Chapter": ch, "Completed": False, "Status": "🔴 Backlog"})
     df_syll = pd.DataFrame(rows)
 
-# Create Navigation Tabs (Added Tab 3!)
 tab1, tab2, tab3 = st.tabs(["📊 Daily Desk Station & Logs", "🎯 Smart Syllabus Matrix & Rank Engine", "📝 AI Infinite Practice Arena"])
 
-# ===================================================
-# TAB 1: DATA LOGS & PERFORMANCE GRAPH
-# ===================================================
 with tab1:
     st.subheader("📝 Log Your Study Hours")
     col_d, col_h, col_g = st.columns(3)
@@ -73,16 +93,12 @@ with tab1:
         chart_data = df_log.copy().set_index('Date')
         st.line_chart(chart_data[['Hours_Studied', 'Daily_Goal']])
 
-# ===================================================
-# TAB 2: SMART MATRIX & RANK ENGINE
-# ===================================================
 with tab2:
     st.subheader("🛡️ Permanent Chapter Checklist Matrix")
     sub_col1, sub_col2, sub_col3 = st.columns(3)
     subjects = ["Physics", "Chemistry", "Math"]
     cols_mapped = [sub_col1, sub_col2, sub_col3]
     updated_rows = []
-    total_backlogs = 0
 
     for i, sub in enumerate(subjects):
         with cols_mapped[i]:
@@ -97,33 +113,20 @@ with tab2:
                 
                 new_check = st.checkbox(ch_name, value=default_checked, key=f"ch_{sub}_{ch_name}")
                 new_status = st.selectbox("Status:", status_options, index=default_status_idx, key=f"st_{sub}_{ch_name}")
-                if new_status == "🔴 Backlog":
-                    total_backlogs += 1
                 updated_rows.append({"Subject": sub, "Chapter": ch_name, "Completed": new_check, "Status": new_status})
 
     df_new_syll = pd.DataFrame(updated_rows)
     df_new_syll.to_csv(SYLLABUS_FILE, index=False)
 
-    def calc_pts(df):
-        pts = 0
-        for _, r in df.iterrows():
-            if r["Completed"]:
-                pts += 1.0 if r["Status"] == "🟢 Completed (PYQs Done)" else 0.6
-        return (pts / len(df)) * 100 if len(df) > 0 else 0.0
-
-    p_cov_pct = calc_pts(df_new_syll[df_new_syll["Subject"] == "Physics"])
-    c_cov_pct = calc_pts(df_new_syll[df_new_syll["Subject"] == "Chemistry"])
-    m_cov_pct = calc_pts(df_new_syll[df_new_syll["Subject"] == "Math"])
-
     st.markdown("---")
     st.subheader("⚡ Study Consistency & Effort Rank Predictor")
     calc_col1, calc_col2, calc_col3 = st.columns(3)
     with calc_col1:
-        days_per_week = st.slider("Effective Study Days Per Week:", min_value=1, max_value=7, value=1)
+        days_per_week = st.slider("Effective Study Days Per Week:", min_value=1, max_value=7, value=6)
     with calc_col2:
-        hours_per_day = st.slider("Average Self-Study Hours Per Day:", min_value=1.0, max_value=14.0, value=1.0, step=0.5)
+        hours_per_day = st.slider("Average Self-Study Hours Per Day:", min_value=1.0, max_value=16.0, value=6.0, step=0.5)
     with calc_col3:
-        mock_score = st.slider("Target/Current Mock Test Score (Out of 300):", min_value=0, max_value=300, value=0, step=1)
+        mock_score = st.slider("Target/Current Mock Test Score (Out of 300):", min_value=0, max_value=300, value=104, step=5)
 
     weekly_hours = days_per_week * hours_per_day
     
@@ -138,59 +141,73 @@ with tab2:
     else:
         st.error("🚨 **DANGER RANGE TRACKING: High Risk Zone (Syllabus Crash Warning)**")
 
-# ===================================================
-# NEW TAB 3: DYNAMIC AI QUESTION GENERATOR Arena
-# ===================================================
 with tab3:
-    st.subheader("🎯 IIT-JEE Infinite Question Generator")
-    st.markdown("Generate real-time custom mock problems powered by Google Gemini.")
+    st.subheader("🎯 Elite Examination Testing Arena")
+    st.markdown("Generate comprehensive custom problem sets mapping strictly to national examination parameters.")
 
-    # Secure configuration input box for your secret key
-    user_api_key = st.text_input("🔑 Enter your Google Gemini API Key:", type="password", help="Get your key for free from Google AI Studio.")
-    
+    user_api_key = st.text_input("🔑 Enter your Google Gemini API Key:", type="password")
     st.markdown("---")
     
     qc1, qc2, qc3, qc4 = st.columns(4)
     with qc1:
-        sel_sub = st.selectbox("Select Subject:", ["Physics", "Chemistry", "Math"])
+        sel_sub = st.selectbox("Choose Target Subject:", ["Physics", "Chemistry", "Math"])
     with qc2:
-        # Changes target chapter list automatically based on selected subject!
-        sel_ch = st.selectbox("Select Target Module:", JEE_SYLLABUS[sel_sub])
+        sel_ch = st.selectbox("Choose Target Chapter Module:", JEE_SYLLABUS[sel_sub])
     with qc3:
-        sel_diff = st.selectbox("Difficulty Profile:", ["JEE Main (Conceptual/Easy)", "JEE Main (Standard/Medium)", "JEE Advanced (Intense Matrix/Hard)"])
+        sel_exam_mode = st.selectbox("Select Target Examination Pattern:", [
+            "CBSE Class 11 Board Mode (Subjective & Derivations)", 
+            "JEE Mains Mode (Single-Correct MCQs + Numerical)", 
+            "JEE Advanced Mode (Intense Multiple-Correct / Matrix Match)"
+        ])
     with qc4:
-        sel_qty = st.slider("Question Quantity:", min_value=1, max_value=5, value=3)
+        sel_qty = st.number_input("Custom Question Quantity:", min_value=1, max_value=50, value=5, step=1)
 
-    if st.button("🚀 Fire Up Practice Arena Tests", use_container_width=True):
+    time_per_question = 2 if "Mains" in sel_exam_mode else (4 if "Advanced" in sel_exam_mode else 3)
+    total_allocated_minutes = sel_qty * time_per_question
+
+    st.info(f"⏳ **Exam Strategy Target:** Total exam duration allocated for this set: **{total_allocated_minutes} Minutes**.")
+
+    if st.button("🚀 Execute Problem Set Compilation Engine", use_container_width=True):
         if not user_api_key:
-            st.error("Please enter your Gemini API Key first to authenticate the pipeline!")
+            st.error("Authentication Missing: Please paste your secret developer key into the secure input box.")
         else:
             try:
-                with st.spinner("Professor Engine processing configuration parameters... Generating your workspace..."):
+                with st.spinner("AI Professor compiling custom exam workspace sheets..."):
                     genai.configure(api_key=user_api_key)
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    # Framing the ultimate strict engineering instructions prompt
                     prompt = f"""
-                    Act as an elite IIT-JEE professor. Generate exactly {sel_qty} clear Multiple Choice Questions (MCQs) for the subject {sel_sub}, chapter "{sel_ch}", matching a difficulty profile of {sel_diff}.
+                    Act as an expert Indian National Examination coordinator for IIT-JEE and NCERT CBSE Boards.
+                    Generate exactly {sel_qty} pristine questions for {sel_sub}, focusing entirely on the module "{sel_ch}".
                     
-                    Format rules strictly:
-                    For each question:
-                    1. Output the Question clearly with proper standard layout notations.
-                    2. Provide four clear options labeled clearly as A), B), C), D).
-                    3. Right below the options, add an expandable-ready hint or solution block clearly demarcated as "Correct Answer & Step-by-Step Explanation:"
-                    Make sure the explanations explain the formulas used cleanly.
+                    Strict Pattern Architecture Rules:
+                    Target Format Blueprint: {sel_exam_mode}.
+                    - If Class 11 Board Mode: Focus on formal theoretical definitions, standard NCERT derivations, and clean step-by-step subjective numerical problems. 
+                    - If JEE Mains Mode: Focus on high-yield single-correct MCQs and standard numerical fill-ins matching recent trends.
+                    - If JEE Advanced Mode: Generate high-conceptual depth problems including multiple-correct options, matrix matching, or challenging multi-tier numerical answers.
+                    
+                    Ensure all questions use standard symbols and notations. Hide the solution block directly underneath each problem in a clean expandable structure designated as:
+                    "Correct Answer & Step-by-Step Explanation:"
                     """
                     
                     response = model.generate_content(prompt)
-                    st.session_state.current_test_output = response.text
-                    st.success("Test Sheet Compiled Successfully!")
+                    st.session_state.unlocked_arena_output = response.text
+                    st.session_state.exam_start_time = time.time()
+                    st.session_state.exam_duration_seconds = total_allocated_minutes * 60
+                    st.success("Custom Exam Paper Generated successfully!")
             except Exception as e:
-                st.error(f"API Connection Exception triggered: {e}")
+                st.error(f"Execution Error: Code failed to reach servers. Reason: {e}")
 
-    # Render generated data on screen
-    if "current_test_output" in st.session_state:
+    if "exam_start_time" in st.session_state and "unlocked_arena_output" in st.session_state:
+        elapsed_time = time.time() - st.session_state.exam_start_time
+        remaining_time = st.session_state.exam_duration_seconds - elapsed_time
+        
+        if remaining_time > 0:
+            mins, secs = divmod(int(remaining_time), 60)
+            st.warning(f"⏰ **LIVE EXAM COUNTDOWN TIMER:** `{mins:02d}:{secs:02d}` Remaining!")
+        else:
+            st.error("🚨 **TIME OVER:** Allocated practice time has expired!")
+
+    if "unlocked_arena_output" in st.session_state:
         st.markdown("---")
-        st.subheader("📝 Live Test Sheet Coordinates")
-        st.info("Grab a rough notebook and solve these before scrolling down to view answers!")
-        st.markdown(st.session_state.current_test_output)
+        st.markdown(st.session_state.unlocked_arena_output)
