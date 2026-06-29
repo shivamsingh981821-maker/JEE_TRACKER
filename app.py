@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import os
-import google.generativeai as genai
 
 st.set_page_config(page_title="AIR 1 Velocity Tracker", page_icon="🚀", layout="wide")
 
