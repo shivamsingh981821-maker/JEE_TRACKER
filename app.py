@@ -120,11 +120,11 @@ with tab2:
     st.subheader("⚡ Study Consistency & Effort Rank Predictor")
     calc_col1, calc_col2, calc_col3 = st.columns(3)
     with calc_col1:
-        days_per_week = st.slider("Effective Study Days Per Week:", min_value=1, max_value=7, value=6)
+        days_per_week = st.slider("Effective Study Days Per Week:", min_value=1, max_value=7, value=1)
     with calc_col2:
-        hours_per_day = st.slider("Average Self-Study Hours Per Day:", min_value=1.0, max_value=16.0, value=6.0, step=0.5)
+        hours_per_day = st.slider("Average Self-Study Hours Per Day:", min_value=1.0, max_value=14.0, value=1.0, step=0.5)
     with calc_col3:
-        mock_score = st.slider("Target/Current Mock Test Score (Out of 300):", min_value=0, max_value=300, value=104, step=5)
+        mock_score = st.slider("Target/Current Mock Test Score (Out of 300):", min_value=0, max_value=300, value=0, step=1)
 
     weekly_hours = days_per_week * hours_per_day
     
@@ -169,7 +169,7 @@ with tab3:
             try:
                 with st.spinner("Professor Engine processing configuration parameters... Generating your workspace..."):
                     genai.configure(api_key=user_api_key)
-                    model = genai.GenerativeModel('gemini-pro')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
                     # Framing the ultimate strict engineering instructions prompt
                     prompt = f"""
