@@ -174,7 +174,7 @@ with tab3:
             try:
                 with st.spinner("AI Professor compiling custom exam workspace sheets..."):
                     genai.configure(api_key=user_api_key) 
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     prompt = f"""
                     Act as an expert Indian National Examination coordinator for IIT-JEE and NCERT CBSE Boards.
